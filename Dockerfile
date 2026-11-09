@@ -1,10 +1,41 @@
+
 FROM python:3.12-slim
-ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 PIP_NO_CACHE_DIR=1 FLOWPAY_DB_PATH=/data/flowpayai.sqlite3 FLOWPAY_DUCKDB_PATH=/data/flowpayai.duckdb
+
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PIP_NO_CACHE_DIR=1
+ENV FLOWPAY_DB_PATH=/data/flowpayai.sqlite3
+ENV FLOWPAY_DUCKDB_PATH=/data/flowpayai.duckdb
+
 WORKDIR /app
-RUN apt-get update && apt-get install -y --no-install-recommends nginx supervisor build-essential && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    nginx \
+    supervisor \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY requirements.txt .
+
 RUN pip install -r requirements.txt
+
 COPY . .
-RUN mkdir -p /data && chmod +x /app/deploy/entrypoint.sh
-EXPOSE 7860
-CMD ["/app/deploy/entrypoint.sh"]\n
+
+# Configure Nginx
+COPY deploy/nginx.conf /etc/nginx/conf.d/default.conf
+
+RUN mkdir -p /data /var/log/supervisor
+
+RUN chmod +x /app/deploy/entrypoint.sh
+
+RUN groupadd appgroup
+
+RUN useradd -r -g appgroup appuser
+
+USER appuser
+
+EXPOSE 8000 8501
+
+VOLUME ["/data"]
+
+CMD ["/app/deploy/entrypoint.sh"]

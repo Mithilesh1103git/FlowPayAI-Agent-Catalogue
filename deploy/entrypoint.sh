@@ -1,1 +1,4 @@
-#!/bin/sh\nset -e\nmkdir -p /data\nexec supervisord -c /app/deployment/supervisord.conf\n
+#!/bin/sh
+set -e
+
+exec supervisord -n -c /app/deploy/supervisord.conf
