@@ -1,0 +1,1 @@
+#!/bin/sh\nset -e\nmkdir -p /data\nexec supervisord -c /app/deployment/supervisord.conf\n

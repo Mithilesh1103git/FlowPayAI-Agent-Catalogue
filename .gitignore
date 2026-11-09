@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*.log
+
+# Environments and secrets
+.venv/
+venv/
+.env
+.env.*.local
+
+# Test/build artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+build/
+dist/
+
+# Runtime data
+/data/
+data/
+*.sqlite3
+*.duckdb
