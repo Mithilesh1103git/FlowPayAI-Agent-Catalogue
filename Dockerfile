@@ -32,10 +32,13 @@ RUN groupadd appgroup
 
 RUN useradd -r -g appgroup appuser
 
+RUN chown -R appuser:appgroup /app /data /var/log/supervisor /var/lib/nginx
+
 USER appuser
 
 EXPOSE 8000 8501
 
 VOLUME ["/data"]
 
-CMD ["/app/deploy/entrypoint.sh"]
+CMD ["supervisord", "-n", "-c", "/app/deploy/supervisord.conf"]
+
