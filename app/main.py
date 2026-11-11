@@ -15,7 +15,9 @@ app = FastAPI(
 init_db()
 
 app.include_router(webhooks.router)
+
 configured_webhook_path = urlparse(settings.PAYPAL_WEBHOOK_URL).path
+
 if configured_webhook_path != "/paypal/webhook":
     app.add_api_route(
         configured_webhook_path,

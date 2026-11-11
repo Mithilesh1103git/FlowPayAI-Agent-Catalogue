@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import html
 import json
 import math
 import re
@@ -27,7 +28,8 @@ from ecommerce.cart import (
 )
 from taskworker import TaskWorker
 
-st.title("FlowPayAI")
+st.image("assets/img/Flow_AI_and_PayPal_Icons_Gradient_Blue.png", width=100)
+st.title("FlowPayAI Ecommerce Agent")
 st.caption(
     "Multi-agent shopping assistant: plan → research (Channel3) → evaluate → advise. "
     "On-site cart confirmation prepares checkout details. "
@@ -104,10 +106,10 @@ def extract_usd_budget(prompt: str) -> float | None:
 
 # Sidebar: E-commerce-only UI
 with st.sidebar:
-    st.header("Pipeline")
+    st.header("Agent")
     st.info("E-commerce Operations")
     st.divider()
-    st.subheader("Pipeline status")
+    st.subheader("Agent status")
     st.success("E-commerce Operations — Existing agent")
     st.divider()
     confidence = st.slider(
@@ -116,7 +118,7 @@ with st.sidebar:
         max_value=1.0,
         value=0.85,
         step=0.05,
-        help="Passed through for the existing E-commerce pipeline.",
+        help="Passed through for the existing E-commerce agent.",
     )
     if st.button("Start new shopping conversation", use_container_width=True):
         st.session_state.shopping_messages = []
@@ -292,7 +294,7 @@ if prompt:
         st.markdown(prompt)
 
     request = {
-        "pipeline": "ecommerce",
+        "agent": "ecommerce",
         "payload": {
             "message": prompt,
             "confidence": confidence,
@@ -799,10 +801,37 @@ if st.session_state.shopping_products:
                         refund_result = asyncio.run(
                             PaymentService.refund_capture(refund_capture_id.strip())
                         )
-                    if refund_result.get("status") == "COMPLETED":
-                        st.success("Refund completed.")
-                    else:
-                        st.info("Refund request is still processing.")
-                    st.json(refund_result)
+                    refund_status = str(refund_result.get("status") or "UNKNOWN").upper()
+                    refund_amount = refund_result.get("amount") or {}
+                    refund_id = refund_result.get("id") or "Not supplied by PayPal"
+                    status_color = (
+                        "#16803c" if refund_status == "COMPLETED"
+                        else "#b7791f" if refund_status in {"PENDING", "PROCESSING"}
+                        else "#b42318" if refund_status in {"FAILED", "DENIED", "CANCELLED"}
+                        else "#475467"
+                    )
+                    status_message = {
+                        "COMPLETED": "The refund has been completed by PayPal.",
+                        "PENDING": "PayPal has accepted the refund and is still processing it.",
+                        "FAILED": "PayPal could not complete the refund. Review the refund record.",
+                    }.get(refund_status, "PayPal returned a refund status. Check PayPal Operations for subsequent updates.")
+                    st.markdown(
+                        f"""
+                        <div style="border:1px solid #d0d5dd;border-radius:12px;padding:16px;margin-top:10px;">
+                          <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+                            <strong style="font-size:1.05rem;">Refund result</strong>
+                            <span style="background:{status_color};color:white;padding:5px 10px;border-radius:20px;font-size:.8rem;font-weight:700;">{html.escape(refund_status)}</span>
+                          </div>
+                          <p style="margin:12px 0;color:inherit;">{html.escape(status_message)}</p>
+                          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;">
+                            <div><small style="color:#667085;">Refund amount</small><div><strong>{html.escape(str(refund_amount.get('value') or 'Not supplied'))} {html.escape(str(refund_amount.get('currency_code') or ''))}</strong></div></div>
+                            <div><small style="color:#667085;">Refund ID</small><div style="overflow-wrap:anywhere;"><strong>{html.escape(str(refund_id))}</strong></div></div>
+                            <div><small style="color:#667085;">Capture ID</small><div style="overflow-wrap:anywhere;"><strong>{html.escape(refund_capture_id.strip())}</strong></div></div>
+                          </div>
+                          <p style="margin:12px 0 0;color:#667085;font-size:.82rem;">Track subsequent status changes in PayPal Operations → Refund activity.</p>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
                 except Exception as exc:
                     st.error(f"PayPal refund failed: {exc}")

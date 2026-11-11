@@ -8,7 +8,7 @@ from typing import Any
 class TaskWorker:
     """Central dispatcher for FlowPayAI multi-agent shopping."""
 
-    SUPPORTED_PIPELINES = {"ecommerce"}
+    SUPPORTED_AGENTS = {"ecommerce"}
 
     def __init__(self) -> None:
         self._graph_ready = False
@@ -18,13 +18,13 @@ class TaskWorker:
         if not isinstance(request, dict):
             return {"valid": False, "errors": ["Task request must be a dictionary."]}
 
-        pipeline = request.get("pipeline")
+        agent = request.get("agent")
         payload = request.get("payload")
 
-        if not isinstance(pipeline, str) or not pipeline.strip():
-            errors.append("A non-empty pipeline name is required.")
-        elif pipeline not in self.SUPPORTED_PIPELINES:
-            errors.append(f"Unsupported pipeline: {pipeline}.")
+        if not isinstance(agent, str) or not agent.strip():
+            errors.append("A non-empty agent name is required.")
+        elif agent not in self.SUPPORTED_AGENTS:
+            errors.append(f"Unsupported agent: {agent}.")
 
         if not isinstance(payload, dict):
             errors.append("payload must be a dictionary.")
@@ -39,8 +39,8 @@ class TaskWorker:
         if not validation["valid"]:
             return {
                 "success": False,
-                "pipeline": (
-                    request.get("pipeline") if isinstance(request, dict) else None
+                "agent": (
+                    request.get("agent") if isinstance(request, dict) else None
                 ),
                 "status": "validation_failed",
                 "errors": validation["errors"],
@@ -54,7 +54,7 @@ class TaskWorker:
         if not isinstance(message, str) or not message.strip():
             return {
                 "success": False,
-                "pipeline": "ecommerce",
+                "agent": "ecommerce",
                 "status": "validation_failed",
                 "message": "Provide a non-empty 'message' in the payload.",
                 "products": [],
@@ -96,7 +96,7 @@ class TaskWorker:
                 ) or "Please provide more details about your shopping request."
                 return {
                     "success": True,
-                    "pipeline": "ecommerce",
+                    "agent": "ecommerce",
                     "status": "clarification_required",
                     "message": reason,
                     "products": current_products,
@@ -124,7 +124,7 @@ class TaskWorker:
 
             return {
                 "success": True,
-                "pipeline": "ecommerce",
+                "agent": "ecommerce",
                 "status": status,
                 "message": (
                     recommendation
@@ -144,8 +144,8 @@ class TaskWorker:
         except Exception as exc:
             return {
                 "success": False,
-                "pipeline": "ecommerce",
-                "status": "pipeline_error",
+                "agent": "ecommerce",
+                "status": "agent_error",
                 "message": f"Multi-agent shopping workflow failed: {exc}",
                 "products": [],
                 "tool_calls": [],

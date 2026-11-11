@@ -29,6 +29,9 @@ from backend.database.sqlite import (
     rows,
     save_payment_method,
     save_payment_order,
+    save_payment_refund,
+    find_order_id_for_capture,
+    update_refund_status,
     save_vault_customer,
     save_vault_order_intent,
     set_payment_method_status_by_hash,
@@ -260,11 +263,35 @@ class PaymentService:
     @staticmethod
     async def refund_capture(capture_id: str) -> dict:
         result = await paypal_service.refund_capture(capture_id)
+        amount = result.get("amount") or {}
+        save_payment_refund(
+            result.get("id"),
+            capture_id=capture_id,
+            order_id=find_order_id_for_capture(capture_id),
+            amount=amount.get("value"),
+            currency=amount.get("currency_code"),
+            status=result.get("status", "PENDING"),
+            payload=result,
+        )
         audit(
             "paypal.refund_requested",
             "capture",
             capture_id,
             details={"refund_id": result.get("id"), "status": result.get("status")},
+        )
+        return result
+
+    @staticmethod
+    async def reconcile_refund(refund_id: str) -> dict:
+        result = await paypal_service.get_refund(refund_id)
+        amount = result.get("amount") or {}
+        save_payment_refund(
+            result.get("id") or refund_id,
+            capture_id=result.get("capture_id"),
+            amount=amount.get("value"),
+            currency=amount.get("currency_code"),
+            status=result.get("status", "UNKNOWN"),
+            payload=result,
         )
         return result
 

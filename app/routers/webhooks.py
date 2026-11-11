@@ -10,6 +10,9 @@ from backend.database.sqlite import (
     audit,
     mark_webhook_status,
     record_webhook,
+    save_payment_refund,
+    update_refund_status,
+    find_order_id_for_capture,
     update_payment_status,
 )
 from backend.services.payment_service import PaymentService
@@ -250,18 +253,47 @@ async def paypal_webhook(
                 "order_id": order_id,
             }
 
-        if event_type in {"PAYMENT.CAPTURE.REFUNDED", "PAYMENT.CAPTURE.REVERSED"}:
-            order_id = _capture_event_order_id(resource)
-            refund_status = (
-                "REFUNDED" if event_type.endswith(".REFUNDED") else "REVERSED"
+        if event_type.startswith("PAYMENT.REFUND."):
+            refund_status = (resource.get("status") or event_type.rsplit(".", 1)[-1]).upper()
+            amount = resource.get("amount") or {}
+            capture_id = resource.get("capture_id") or resource.get("supplementary_data", {}).get("related_ids", {}).get("capture_id")
+            refund_id = resource.get("id")
+            save_payment_refund(
+                refund_id,
+                capture_id=capture_id,
+                order_id=find_order_id_for_capture(capture_id),
+                amount=amount.get("value"),
+                currency=amount.get("currency_code"),
+                status=refund_status,
+                payload=resource,
             )
+            audit(
+                f"paypal.refund_{refund_status.lower()}",
+                "payment_refund",
+                refund_id,
+                details={"event_id": event_id, "capture_id": capture_id},
+            )
+            return {"status": "received", "refund_status": refund_status, "refund_id": refund_id}
+
+        if event_type in {"PAYMENT.CAPTURE.REFUNDED", "PAYMENT.CAPTURE.REVERSED"}:
+            capture_id = resource.get("id")
+            order_id = _capture_event_order_id(resource) or find_order_id_for_capture(capture_id)
+            refund_status = "REFUNDED" if event_type.endswith(".REFUNDED") else "REVERSED"
+            if refund_status == "REFUNDED":
+                changed = update_refund_status(
+                    capture_id=capture_id, status="COMPLETED", payload=resource
+                )
+                if not changed:
+                    save_payment_refund(
+                        None, capture_id=capture_id, order_id=order_id,
+                        status="COMPLETED", payload=resource,
+                    )
             if order_id:
-                update_payment_status(order_id, refund_status, resource)
                 audit(
                     f"paypal.capture_{refund_status.lower()}",
                     "payment_order",
                     order_id,
-                    details={"event_id": event_id, "capture_id": resource.get("id")},
+                    details={"event_id": event_id, "capture_id": capture_id},
                 )
             return {
                 "status": "received",

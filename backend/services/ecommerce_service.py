@@ -9,7 +9,7 @@ class EcommerceService:
     def search(self, query, prior_products=None, session_id=None):
         result = self.worker.process_task(
             {
-                "pipeline": "ecommerce",
+                "agent": "ecommerce",
                 "payload": {"message": query, "current_products": prior_products or []},
             }
         )

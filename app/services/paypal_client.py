@@ -124,6 +124,20 @@ class PayPalService:
                 )
             return response.json()
 
+    async def get_refund(self, refund_id: str) -> Dict[str, Any]:
+        async with self._client() as client:
+            token = await self.get_access_token(client)
+            response = await client.get(
+                f"{self.base_url}/v2/payments/refunds/{refund_id}",
+                headers={"Authorization": f"Bearer {token}"},
+            )
+            if response.status_code != 200:
+                raise HTTPException(
+                    status_code=response.status_code,
+                    detail=response.json(),
+                )
+            return response.json()
+
     async def delete_payment_token(self, vault_id: str) -> Dict[str, Any]:
         async with self._client() as client:
             token = await self.get_access_token(client)

@@ -1,13 +1,13 @@
 import pandas as pd
 import streamlit as st
 
-from backend.database.duckdb import query, refresh
 from backend.services.dashboard_service import metrics
 from components.aggrid import render_grid
 
+st.image("assets/img/Flow_AI_and_PayPal_Icons_Gradient_Blue.png", width=100)
 st.title("FlowPayAI Dashboard")
 st.caption(
-    "Operational overview from persisted SQLite records; DuckDB provides optional analytical queries."
+    "An overview of workflow activity, product discovery, payments, and audit events."
 )
 m = metrics()
 cols = st.columns(4)
@@ -26,13 +26,3 @@ with right:
     render_grid(pd.DataFrame(m["payment_status"]), key="payment-status", height=220)
 st.subheader("Recent workflow executions")
 render_grid(pd.DataFrame(m["recent"]), key="recent-workflows", height=360)
-with st.expander("Refresh DuckDB analytical snapshot"):
-    if st.button("Refresh analytics"):
-        try:
-            refresh()
-            st.success("DuckDB snapshot refreshed.")
-        except Exception as e:
-            st.error(f"Analytics refresh failed: {e}")
-    st.caption(
-        "DuckDB is an analytical read model. SQLite remains the operational source of truth."
-    )

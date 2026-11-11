@@ -62,6 +62,14 @@ def init_db():
         CREATE TABLE IF NOT EXISTS payment_events(
           event_id TEXT PRIMARY KEY, paypal_order_id TEXT, event_type TEXT,
           status TEXT, created_at TEXT NOT NULL, payload_json TEXT);
+        CREATE TABLE IF NOT EXISTS payment_refunds(
+          refund_id TEXT PRIMARY KEY, capture_id TEXT, paypal_order_id TEXT,
+          amount TEXT, currency TEXT, status TEXT NOT NULL,
+          created_at TEXT NOT NULL, updated_at TEXT NOT NULL, payload_json TEXT);
+        CREATE INDEX IF NOT EXISTS ix_payment_refunds_capture
+          ON payment_refunds(capture_id);
+        CREATE INDEX IF NOT EXISTS ix_payment_refunds_status
+          ON payment_refunds(status);
         CREATE TABLE IF NOT EXISTS payment_methods(
           method_id TEXT PRIMARY KEY, buyer_id TEXT NOT NULL,
           vault_id_ciphertext TEXT NOT NULL, vault_id_hash TEXT NOT NULL UNIQUE,
@@ -354,6 +362,73 @@ def update_payment_status(order_id, status, payload=None):
         details={"status": status},
     )
 
+
+
+def save_payment_refund(refund_id, capture_id=None, order_id=None, amount=None, currency=None, status="PENDING", payload=None):
+    """Persist a PayPal refund response without overwriting capture status."""
+    refund_id = str(refund_id or ("capture:" + str(capture_id)))
+    now = utcnow()
+    with connect() as c:
+        # Replace a capture-level placeholder once PayPal supplies its refund ID.
+        if capture_id and not refund_id.startswith("capture:"):
+            c.execute(
+                "DELETE FROM payment_refunds WHERE refund_id=?",
+                ("capture:" + str(capture_id),),
+            )
+        c.execute(
+            """INSERT INTO payment_refunds
+               (refund_id,capture_id,paypal_order_id,amount,currency,status,created_at,updated_at,payload_json)
+               VALUES(?,?,?,?,?,?,?,?,?)
+               ON CONFLICT(refund_id) DO UPDATE SET
+                 capture_id=COALESCE(excluded.capture_id,payment_refunds.capture_id),
+                 paypal_order_id=COALESCE(excluded.paypal_order_id,payment_refunds.paypal_order_id),
+                 amount=COALESCE(excluded.amount,payment_refunds.amount),
+                 currency=COALESCE(excluded.currency,payment_refunds.currency),
+                 status=excluded.status,updated_at=excluded.updated_at,
+                 payload_json=excluded.payload_json""",
+            (refund_id, capture_id, order_id, str(amount) if amount is not None else None,
+             currency, str(status or "UNKNOWN").upper(), now, now,
+             json.dumps(payload or {}, default=str)),
+        )
+    audit("paypal.refund_status_saved", "payment_refund", refund_id,
+          severity="WARNING" if str(status).upper() in {"FAILED", "CANCELLED"} else "INFO",
+          details={"capture_id": capture_id, "order_id": order_id, "status": status})
+    return refund_id
+
+
+def update_refund_status(refund_id=None, capture_id=None, status="UNKNOWN", payload=None):
+    """Update a known refund by PayPal refund ID or its related capture ID."""
+    with connect() as c:
+        if refund_id:
+            cur = c.execute(
+                "UPDATE payment_refunds SET status=?,updated_at=?,payload_json=? WHERE refund_id=?",
+                (str(status).upper(), utcnow(), json.dumps(payload or {}, default=str), str(refund_id)),
+            )
+        elif capture_id:
+            cur = c.execute(
+                "UPDATE payment_refunds SET status=?,updated_at=?,payload_json=? WHERE capture_id=?",
+                (str(status).upper(), utcnow(), json.dumps(payload or {}, default=str), str(capture_id)),
+            )
+        else:
+            return 0
+        return cur.rowcount
+
+
+def find_order_id_for_capture(capture_id):
+    """Find the local order whose saved PayPal response contains this capture."""
+    if not capture_id:
+        return None
+    for record in rows("SELECT paypal_order_id,payload_json FROM payment_orders"):
+        try:
+            payload = json.loads(record.get("payload_json") or "{}")
+        except (TypeError, ValueError):
+            continue
+        units = payload.get("purchase_units") or []
+        for unit in units:
+            captures = (unit.get("payments") or {}).get("captures") or []
+            if any(str(item.get("id")) == str(capture_id) for item in captures):
+                return record.get("paypal_order_id")
+    return None
 
 def save_vault_order_intent(order_id, buyer_id):
     with connect() as c:

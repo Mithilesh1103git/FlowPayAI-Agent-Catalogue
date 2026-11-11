@@ -1,4 +1,4 @@
-"""Pass prior-turn products into the pipeline (no Channel3 call)."""
+"""Pass prior-turn products into the agent (no Channel3 call)."""
 
 from __future__ import annotations
 
