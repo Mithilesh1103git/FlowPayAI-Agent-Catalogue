@@ -1,13 +1,13 @@
 import streamlit as st
 
-st.title("FlowPayAI User Guide")
+st.image("assets/img/FlowPay_AI_PayPal_Integration_Banner_Contrast_Grey.png", width=300)
+st.title("Application User Guide")
 st.caption(
     "A practical guide to discovering products, completing PayPal Sandbox checkout, "
     "and reviewing application activity."
 )
 
-st.markdown(
-    """
+st.markdown("""
     ## 1. Start at the Dashboard
 
     The Dashboard gives you an operational overview of FlowPayAI. It summarizes
@@ -120,12 +120,10 @@ st.markdown(
     - Optional PayPal Vault features are available only when the merchant
       account and application configuration meet PayPal's eligibility and
       configuration requirements.
-    """
-)
+    """)
 
 with st.expander("Troubleshooting"):
-    st.markdown(
-        """
+    st.markdown("""
         - **No PayPal approval link:** Check the PayPal Sandbox credentials and
           review the application logs for the order-creation error.
         - **Payment or refund remains pending:** Check that the public webhook URL is
@@ -135,5 +133,4 @@ with st.expander("Troubleshooting"):
         - **Vault options are unavailable:** Ordinary PayPal checkout can still
           be used. Vault enrollment and saved-token checkout require separate
           merchant eligibility and configuration.
-        """
-    )
+        """)

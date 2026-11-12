@@ -28,8 +28,8 @@ from ecommerce.cart import (
 )
 from taskworker import TaskWorker
 
-st.image("assets/img/Flow_AI_and_PayPal_Icons_Gradient_Blue.png", width=100)
-st.title("FlowPayAI Ecommerce Agent")
+st.image("assets/img/FlowPay_AI_PayPal_Integration_Banner_Contrast_Grey.png", width=300)
+st.title("Ecommerce Agent")
 st.caption(
     "Multi-agent shopping assistant: plan → research (Channel3) → evaluate → advise. "
     "On-site cart confirmation prepares checkout details. "
@@ -782,7 +782,7 @@ if st.session_state.shopping_products:
                         st.error(f"Could not remove saved PayPal method: {exc}")
 
         st.divider()
-        st.subheader("PayPal Sandbox refund test")
+        st.subheader("PayPal Refund (For Demo Purpose)")
         st.caption(
             "Enter a completed PayPal capture ID to request a full refund through "
             "the shared PaymentService."
@@ -801,20 +801,32 @@ if st.session_state.shopping_products:
                         refund_result = asyncio.run(
                             PaymentService.refund_capture(refund_capture_id.strip())
                         )
-                    refund_status = str(refund_result.get("status") or "UNKNOWN").upper()
+                    refund_status = str(
+                        refund_result.get("status") or "UNKNOWN"
+                    ).upper()
                     refund_amount = refund_result.get("amount") or {}
                     refund_id = refund_result.get("id") or "Not supplied by PayPal"
                     status_color = (
-                        "#16803c" if refund_status == "COMPLETED"
-                        else "#b7791f" if refund_status in {"PENDING", "PROCESSING"}
-                        else "#b42318" if refund_status in {"FAILED", "DENIED", "CANCELLED"}
-                        else "#475467"
+                        "#16803c"
+                        if refund_status == "COMPLETED"
+                        else (
+                            "#b7791f"
+                            if refund_status in {"PENDING", "PROCESSING"}
+                            else (
+                                "#b42318"
+                                if refund_status in {"FAILED", "DENIED", "CANCELLED"}
+                                else "#475467"
+                            )
+                        )
                     )
                     status_message = {
                         "COMPLETED": "The refund has been completed by PayPal.",
                         "PENDING": "PayPal has accepted the refund and is still processing it.",
                         "FAILED": "PayPal could not complete the refund. Review the refund record.",
-                    }.get(refund_status, "PayPal returned a refund status. Check PayPal Operations for subsequent updates.")
+                    }.get(
+                        refund_status,
+                        "PayPal returned a refund status. Check PayPal Operations for subsequent updates.",
+                    )
                     st.markdown(
                         f"""
                         <div style="border:1px solid #d0d5dd;border-radius:12px;padding:16px;margin-top:10px;">

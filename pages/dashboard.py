@@ -4,8 +4,8 @@ import streamlit as st
 from backend.services.dashboard_service import metrics
 from components.aggrid import render_grid
 
-st.image("assets/img/Flow_AI_and_PayPal_Icons_Gradient_Blue.png", width=100)
-st.title("FlowPayAI Dashboard")
+st.image("assets/img/FlowPay_AI_PayPal_Integration_Banner_Contrast_Grey.png", width=300)
+st.title("Dashboard")
 st.caption(
     "An overview of workflow activity, product discovery, payments, and audit events."
 )

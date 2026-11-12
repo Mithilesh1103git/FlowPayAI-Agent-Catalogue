@@ -39,9 +39,7 @@ class TaskWorker:
         if not validation["valid"]:
             return {
                 "success": False,
-                "agent": (
-                    request.get("agent") if isinstance(request, dict) else None
-                ),
+                "agent": (request.get("agent") if isinstance(request, dict) else None),
                 "status": "validation_failed",
                 "errors": validation["errors"],
                 "message": "; ".join(validation["errors"]),

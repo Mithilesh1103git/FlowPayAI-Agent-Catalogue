@@ -8,7 +8,7 @@ from backend.services.payment_service import PaymentService
 from components.aggrid import render_grid
 
 st.image("assets/img/paypal-logo-2.png", width=100)
-st.title("PayPal Operations")
+st.title("Payment Operations")
 st.caption(
     "Monitor PayPal payments and refunds, reconcile pending transactions, "
     "and review the complete transaction history."
@@ -27,25 +27,21 @@ TERMINAL_REFUND_STATUSES = {"COMPLETED", "FAILED", "CANCELLED", "DENIED"}
 
 
 def load_payment_orders():
-    return rows(
-        """
+    return rows("""
         SELECT paypal_order_id,checkout_id,amount,currency,status,created_at
         FROM payment_orders
         ORDER BY created_at DESC
         LIMIT 1000
-        """
-    )
+        """)
 
 
 def load_refunds():
-    return rows(
-        """
+    return rows("""
         SELECT refund_id,capture_id,paypal_order_id,amount,currency,status,created_at,updated_at
         FROM payment_refunds
         ORDER BY updated_at DESC
         LIMIT 1000
-        """
-    )
+        """)
 
 
 data = load_payment_orders()
@@ -78,8 +74,7 @@ if st.button(
     refunds_to_check = [
         item
         for item in pending_refunds
-        if item.get("refund_id")
-        and not str(item["refund_id"]).startswith("capture:")
+        if item.get("refund_id") and not str(item["refund_id"]).startswith("capture:")
     ][:50]
     total_to_check = len(orders_to_check) + len(refunds_to_check)
     checked_payments = 0

@@ -3,15 +3,21 @@ from pathlib import Path
 import streamlit as st
 
 from backend.database.sqlite import init_db
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 init_db()
 
-st.logo(
-    "assets/img/Flow_AI_and_PayPal_Icons_Gradient_Blue.png",  # Can be a local file path, URL, or emoji
-    size="large",  # Options: "small", "medium", "large"
-    link="http://localhost:8501",  # Optional URL when the logo is clicked
-    icon_image="assets/img/Flow_AI_and_PayPal_Icons_Gradient_Blue.png",  # Optional smaller image for collapsed sidebar
-)
+WEB_APP_LINK = "https://flowpay-ai-web-latest.onrender.com/Portal/ListArtifacts"
+
+# st.logo(
+#     "assets/img/Flow_AI_and_PayPal_Icons_Gradient_Blue.png",  # Can be a local file path, URL, or emoji
+#     size="large",  # Options: "small", "medium", "large"
+#     link="http://localhost:8501",  # Optional URL when the logo is clicked
+#     icon_image="assets/img/Flow_AI_and_PayPal_Icons_Gradient_Blue.png",  # Optional smaller image for collapsed sidebar
+# )
 
 st.set_page_config(
     page_title="FlowPayAI",
@@ -39,4 +45,15 @@ pg = st.navigation(
         "Documentation": [how_to_doc],
     }
 )
+
 pg.run()
+
+with st.sidebar:
+    st.link_button(
+        label="Go to Artifacts",
+        url=WEB_APP_LINK,
+        key="artifacts",
+        use_container_width=True,  # replaces manual pixel width
+    )
+    st.space()
+    st.image("assets/img/FlowPay_AI_Meets_PayPal_Logo_Contrast_Grey.png", width="content")
